@@ -1,6 +1,6 @@
-import { useFrame, Vector3 } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
-import { BlockInfo, Team } from "./App";
+import { BlockInfo, Team } from "./Scene";
 
 const Block = (props: { info: BlockInfo, onClick: () => void }): JSX.Element => {
   const ref = useRef<any>();
@@ -10,7 +10,8 @@ const Block = (props: { info: BlockInfo, onClick: () => void }): JSX.Element => 
   // const [color, setColor] = useState('yellow');
 
   useFrame((state, delta) => {
-    // ref.current.rotation.y += 0.5 * delta;
+    ref.current.rotation.y += Math.random() * 2 * delta;
+    ref.current.rotation.x += Math.random() * 2 * delta;
   });
 
   return (
@@ -23,9 +24,8 @@ const Block = (props: { info: BlockInfo, onClick: () => void }): JSX.Element => 
       onPointerOut={(event) => hover(false)}>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial color={
-        hovered ? 'gray' :
-          props.info.team === Team.None ? 'yellow' :
-            props.info.team === Team.O ? 'black' : 'white'
+        props.info.team === Team.None ? hovered ? 'orange' : 'yellow' :
+          props.info.team === Team.O ? 'black' : 'white'
       } />
     </mesh>
   );

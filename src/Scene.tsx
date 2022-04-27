@@ -1,7 +1,6 @@
-import { Canvas, Vector3 } from '@react-three/fiber'
+import { useFrame, Vector3 } from "@react-three/fiber";
 import { useState } from "react";
 import BlockGrid from './BlockGrid';
-import SceneCamera from './SceneCamera';
 
 export enum Team {
   'None', 'O', 'X'
@@ -12,12 +11,13 @@ export interface BlockInfo {
   team: Team
 };
 
-const App = (): JSX.Element => {
+const Scene = () => {
 
-  const spacing: number = 1.1;
+  const spacing: number = 1.4;
 
   const [cameraPos, setCameraPos] = useState<Vector3>({ x: 0, y: 0, z: 5 });
   const [turn, setTurn] = useState<number>(0);
+  const [winner, setWinner] = useState<Team>(Team.None)
   const [blocks, setBlocks] = useState<Array<BlockInfo>>([
 
     { position: [-spacing, spacing, 0], team: Team.None },
@@ -37,7 +37,7 @@ const App = (): JSX.Element => {
     for (let i = 0; i < 3; i++) {
       team = blocks[i * 3].team;
       if (team === Team.None) {
-        break;
+        continue;
       }
       for (let j = 0; j < 3; j++) {
         if (team !== blocks[i * 3 + j].team) {
@@ -76,12 +76,12 @@ const App = (): JSX.Element => {
     return team !== Team.None ? team : tempTeam !== Team.None ? tempTeam : Team.None;
   }
 
-  const onBlockClick = (index: number): void => {
+  const handleBlockClick = (index: number): void => {
     let newBlocks = [...blocks];
     if (newBlocks[index].team === Team.None) {
       newBlocks[index].team = turn % 2 + 1;
       setBlocks(newBlocks);
-      console.log(checkWin());
+      setWinner(checkWin());
       setTurn(turn + 1);
       if (turn >= 9) {
         console.log('GAME DONE');
@@ -89,16 +89,57 @@ const App = (): JSX.Element => {
     }
   }
 
-  return (
-    <Canvas>
+  const resetGame = () => {
+    let newBlocks = [...blocks];
+    for (let i = 0; i < newBlocks.length; i++) {
+      newBlocks[i].team = Team.None;
+    }
+    setBlocks(newBlocks);
+    setTurn(0);
+    setWinner(Team.None);
+  }
 
+  useFrame((state, delta) => {
+    // console.log(cameraPos.z);
+    if (cameraPos.z > 5) {
+      // WOAH ZOOM IN PART
+      let speed = 500;
+      speed = cameraPos.z * 0.5 + 75;
+      if (cameraPos.z - speed * delta <= 5) {
+        setCameraPos({ z: 5 });
+        state.camera.position.z = 5;
+        return;
+      }
+      setCameraPos({ y: 0, z: cameraPos.z - speed * delta });
+      state.camera.position.z = cameraPos.z;
+      state.camera.position.y = cameraPos.y;
+      return;
+    }
+    if (cameraPos.z <= -2) {
+      // THE ONE TIME ZOOM OUT
+      setCameraPos({ z: 1000 });
+      state.camera.position.y = 50;
+      state.camera.position.z = cameraPos.z;
+      resetGame();
+      return;
+    }
+    if (winner === Team.None) {
+      return;
+    }
+    setCameraPos({ z: cameraPos.z - 2 * delta });
+    state.camera.position.z = cameraPos.z;
+  });
+
+  return (
+    <group>
+      <BlockGrid blocks={blocks} onBlockClick={winner === Team.None ? handleBlockClick : (index: number) => { }} />
       <ambientLight intensity={0.1} />
       <spotLight position={[10, 10, 10]} angle={0.25} penumbra={1} />
       <pointLight position={[-10, -10, -10]} />
-      {BlockGrid({ blocks: blocks, onBlockClick: onBlockClick })}
-      <SceneCamera position={cameraPos} />
-    </Canvas >
+
+    </group>
   );
+
 }
 
-export default App;
+export default Scene;
