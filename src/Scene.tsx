@@ -1,9 +1,9 @@
-import { useFrame, Vector3 } from "@react-three/fiber";
-import { useState } from "react";
+import { useFrame, useThree, Vector3 } from "@react-three/fiber";
+import { useRef, useState } from "react";
 import BlockGrid from './BlockGrid';
 
 export enum Team {
-  'None', 'O', 'X'
+  'None', 'O', 'X', 'line'
 }
 
 export interface BlockInfo {
@@ -13,13 +13,13 @@ export interface BlockInfo {
 
 const Scene = () => {
 
+  const { viewport } = useThree();
+
   const spacing: number = 1.4;
 
-  const [cameraPos, setCameraPos] = useState<Vector3>({ x: 0, y: 0, z: 5 });
   const [turn, setTurn] = useState<number>(0);
   const [winner, setWinner] = useState<Team>(Team.None)
   const [blocks, setBlocks] = useState<Array<BlockInfo>>([
-
     { position: [-spacing, spacing, 0], team: Team.None },
     { position: [0, spacing, 0], team: Team.None },
     { position: [spacing, spacing, 0], team: Team.None },
@@ -30,6 +30,16 @@ const Scene = () => {
     { position: [0, -spacing, 0], team: Team.None },
     { position: [spacing, -spacing, 0], team: Team.None }
   ]);
+
+  const turnPassed = useRef(false);
+
+  const setLine = (a: number, b: number, c: number) => {
+    let newBlocks = [...blocks];
+    newBlocks[a].team = Team.line;
+    newBlocks[b].team = Team.line;
+    newBlocks[c].team = Team.line;
+    setBlocks(newBlocks);
+  }
 
   const checkWin = (): Team => {
     let team: Team;
@@ -44,6 +54,7 @@ const Scene = () => {
           break;
         }
         if (j === 2) {
+          setLine(i * 3 + 0, i * 3 + 1, i * 3 + 2);
           return team;
         }
       }
@@ -59,6 +70,7 @@ const Scene = () => {
           break;
         }
         if (j >= 2) {
+          setLine(i + 0, i + 3, i + 6);
           return team;
         }
       }
@@ -73,12 +85,21 @@ const Scene = () => {
         tempTeam = Team.None;
       }
     }
-    return team !== Team.None ? team : tempTeam !== Team.None ? tempTeam : Team.None;
+    if (team !== Team.None) {
+      setLine(0, 4, 8);
+      return team;
+    }
+    if (tempTeam !== Team.None) {
+      setLine(2, 4, 6);
+      return tempTeam;
+    }
+    return Team.None;
   }
 
   const handleBlockClick = (index: number): void => {
     let newBlocks = [...blocks];
-    if (newBlocks[index].team === Team.None) {
+    if (newBlocks[index].team === Team.None && !turnPassed.current) {
+      turnPassed.current = true;
       newBlocks[index].team = turn % 2 + 1;
       setBlocks(newBlocks);
       setWinner(checkWin());
@@ -100,42 +121,39 @@ const Scene = () => {
   }
 
   useFrame((state, delta) => {
+    turnPassed.current = false;
     // console.log(cameraPos.z);
-    if (cameraPos.z > 5) {
+    if (state.camera.position.z > 5) {
       // WOAH ZOOM IN PART
       let speed = 500;
-      speed = cameraPos.z * 0.5 + 75;
-      if (cameraPos.z - speed * delta <= 5) {
-        setCameraPos({ z: 5 });
+      speed = state.camera.position.z * 1.5 + 70;
+      if (state.camera.position.z - speed * delta <= 5) {
         state.camera.position.z = 5;
         return;
       }
-      setCameraPos({ y: 0, z: cameraPos.z - speed * delta });
-      state.camera.position.z = cameraPos.z;
-      state.camera.position.y = cameraPos.y;
+      state.camera.position.z = state.camera.position.z - speed * delta;
+      state.camera.position.y = 0;
       return;
     }
-    if (cameraPos.z <= -2) {
+    if (state.camera.position.z <= -1.2) {
       // THE ONE TIME ZOOM OUT
-      setCameraPos({ z: 1000 });
+      state.camera.position.z = 2000;
       state.camera.position.y = 50;
-      state.camera.position.z = cameraPos.z;
       resetGame();
       return;
     }
-    if (winner === Team.None) {
-      return;
+    if (winner !== Team.None || turn >= 9) {
+      state.camera.position.z = state.camera.position.z - 2 * delta;
     }
-    setCameraPos({ z: cameraPos.z - 2 * delta });
-    state.camera.position.z = cameraPos.z;
   });
 
+  const shortestLen = Math.min(viewport.width, viewport.height);
+
   return (
-    <group>
+    <group scale={shortestLen >= 5 ? 1 : shortestLen / 5}>
       <BlockGrid blocks={blocks} onBlockClick={winner === Team.None ? handleBlockClick : (index: number) => { }} />
       <ambientLight intensity={0.1} />
       <spotLight position={[10, 10, 10]} angle={0.25} penumbra={1} />
-      <pointLight position={[-10, -10, -10]} />
 
     </group>
   );
