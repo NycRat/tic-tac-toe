@@ -1,0 +1,1 @@
+{"version":3,"file":"static/css/main.17dc2fc0.css","mappings":"AAAA,gBAOE,yBAHA,YACA,SACA,UAHA,UAIA","sources":["Styles.scss"],"sourcesContent":["html,\nbody,\n#root {\n  width: 100%;\n  height: 100%;\n  margin: 0;\n  padding: 0;\n  background-color: #cde2c1;\n}"],"names":[],"sourceRoot":""}
